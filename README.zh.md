@@ -233,12 +233,10 @@ bridge 会检查所选目录存在、是目录，并且不是 `/`、Home 根、�
 }
 ```
 
-新建和恢复 Codex 会话时都会传入 `approval_policy="on-request"` 和
-`approvals_reviewer="auto_review"`，由 Codex 审核需要审批的操作，bridge 不自行批准。
-该选项不改变配置的沙箱；如需保留沙箱边界，按上例使用 `workspace`。
-不配置 `approvalMode` 或设为 `"never"` 时保持原有行为。需要安装支持
+启用后由 Codex 自动审核审批请求，需要安装支持
 [Auto-review](https://learn.chatgpt.com/docs/sandboxing/auto-review) 的 Codex 版本。
-该选项不会增加飞书手动审批按钮或 `/approve` 命令。
+该选项不改变配置的沙箱；如需保留沙箱边界，按上例使用 `workspace`。
+不配置 `approvalMode` 或设为 `"never"` 时保持原有行为。
 
 ## 数据目录
 
