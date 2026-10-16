@@ -218,6 +218,28 @@ bridge 会检查所选目录存在、是目录，并且不是 `/`、Home 根、�
 
 旧版 `sandbox` 字段仍可读取。bridge 保存 profile 后，会把该设置迁移为 canonical `permissions`。
 
+要启用 Codex 的**替我审批**，在对应 profile 中设置
+`permissions.codex.approvalMode` 为 `"auto-review"`，然后重启 bridge：
+
+```json
+{
+  "permissions": {
+    "defaultAccess": "workspace",
+    "maxAccess": "workspace",
+    "codex": {
+      "approvalMode": "auto-review"
+    }
+  }
+}
+```
+
+新建和恢复 Codex 会话时都会传入 `approval_policy="on-request"` 和
+`approvals_reviewer="auto_review"`，由 Codex 审核需要审批的操作，bridge 不自行批准。
+该选项不改变配置的沙箱；如需保留沙箱边界，按上例使用 `workspace`。
+不配置 `approvalMode` 或设为 `"never"` 时保持原有行为。需要安装支持
+[Auto-review](https://learn.chatgpt.com/docs/sandboxing/auto-review) 的 Codex 版本。
+该选项不会增加飞书手动审批按钮或 `/approve` 命令。
+
 ## 数据目录
 
 | 路径 | 内容 |

@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { CodexAdapter } from '../../src/agent/codex/adapter.js';
 import { buildCodexArgs } from '../../src/agent/codex/argv.js';
 import type { AgentEvent } from '../../src/agent/types.js';
+import { createDefaultProfileConfig } from '../../src/config/profile-schema.js';
+import { createRuntimeAgent } from '../../src/runtime/agent-runtime.js';
 
 interface FakeBinary {
   path: string;
@@ -85,6 +87,44 @@ describe('CodexAdapter process contract', () => {
     });
     expect(record.env.APP_SECRET).toBe('inherited-secret');
   });
+
+  it.each([undefined, 'thread-existing'])(
+    'passes profile automatic review settings to the Codex process (thread=%s)',
+    async (threadId) => {
+      const fake = await createFakeCodex({
+        lines: [{ type: 'thread.started', thread_id: threadId ?? 'thread-new' }, { type: 'turn.completed' }],
+      });
+      cleanup.push(fake.dir);
+      const profile = createDefaultProfileConfig({
+        agentKind: 'codex',
+        accounts: { app: { id: 'cli_test', secret: '${APP_SECRET}', tenant: 'feishu' } },
+        codex: { binaryPath: fake.path, ignoreRules: false },
+        permissions: {
+          defaultAccess: 'workspace',
+          maxAccess: 'workspace',
+          codex: { approvalMode: 'auto-review' },
+        },
+      });
+      const agent = createRuntimeAgent(profile, { profileDir: fake.dir });
+      const run = agent.run({
+        runId: 'run-auto-review',
+        prompt: 'hello from lark',
+        cwd: await realpath(fake.dir),
+        threadId,
+      });
+
+      expect(await collect(run.events)).toContainEqual({
+        type: 'done', threadId: threadId ?? 'thread-new', terminationReason: 'normal',
+      });
+      const record = await readRecord(fake.recordPath);
+      expect(record.argv).toContain('approval_policy="on-request"');
+      expect(record.argv).toContain('approvals_reviewer="auto_review"');
+      expect(record.argv).not.toContain('approval_policy="never"');
+      expect(record.argv).not.toContain('--ignore-rules');
+      expect(record.argv[record.argv.indexOf('--sandbox') + 1]).toBe('workspace-write');
+      expect(record.argv.includes('resume')).toBe(threadId !== undefined);
+    },
+  );
 
   it('injects the active bridge profile env while preserving Codex env overrides', async () => {
     process.env.CODEX_HOME = '/outer/codex-home';
